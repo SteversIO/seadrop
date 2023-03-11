@@ -14,10 +14,16 @@ import {
 } from "./IMermaidMechanics.sol";
 
 /// @custom:security-contact steve@megacatstudios.com
-contract MermaidsSeaDrop is AccessControl, IMermaidMechanics {
+contract MermaidMechanics is AccessControl, IMermaidMechanics {
   bytes32 public constant GAIA_ROLE = keccak256("GAIA_ROLE");
   bytes32 public constant EGG_HATCHER_ROLE = keccak256("EGG_HATCHER_ROLE");
   
+  uint256 public currentAvailableTokenId = 1;
+  uint256 mintLimit = 3333;
+
+  uint256 public currentAvailableEggMintId = 3334;
+  uint256 eggMintLimit = 10000;
+
   mapping (uint256 => uint256) private roostedTokens;
   mapping (uint256 => uint256) private embarkedTokens;
 
@@ -102,7 +108,7 @@ contract MermaidsSeaDrop is AccessControl, IMermaidMechanics {
       emit Conclude(_msgSender(), tokenId, blockAge);
   }
   
-  function layEgg(uint256 mermaidTokenId, address to) public onlyRole(GAIA_ROLE) {
+  function layEgg(address owner, uint256 mermaidTokenId, address to) public onlyRole(GAIA_ROLE) {
       eggsLaid[mermaidTokenId] = eggsLaid[mermaidTokenId] + 1;
       emit LayEgg(_msgSender(), to, mermaidTokenId);
   }

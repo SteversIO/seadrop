@@ -26,12 +26,6 @@ import {
 contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOperator {
   bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
 
-  uint256 public currentAvailableTokenId = 1;
-  uint256 mintLimit = 3333;
-
-  uint256 public currentAvailableEggMintId = 3334;
-  uint256 eggMintLimit = 10000;
-
   address payable public recipient;
   uint internal balance = 0;
   uint256 mintRate = 0.01 ether;
