@@ -1,3 +1,5 @@
+pragma solidity ^0.8.17;
+
 /// @custom:security-contact steve@megacatstudios.com
 interface IMermaidMechanics {
   // Owner mechanics
@@ -23,4 +25,6 @@ interface IMermaidMechanics {
    * @param eggTokenId tokenId of MermaidEgg NFT
    */
   function birth (address to, uint256 parentMermaidTokenId, uint256 eggTokenId) external;
+
+  function safeTransferFromCheck(address from, address to, uint256 tokenId) external;
 }

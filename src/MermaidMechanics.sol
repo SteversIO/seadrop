@@ -17,12 +17,6 @@ import {
 contract MermaidsSeaDrop is AccessControl, IMermaidMechanics {
   bytes32 public constant GAIA_ROLE = keccak256("GAIA_ROLE");
   bytes32 public constant EGG_HATCHER_ROLE = keccak256("EGG_HATCHER_ROLE");
-
-  uint256 public currentAvailableTokenId = 1;
-  uint256 mintLimit = 3333;
-
-  uint256 public currentAvailableEggMintId = 3334;
-  uint256 eggMintLimit = 10000;
   
   mapping (uint256 => uint256) private roostedTokens;
   mapping (uint256 => uint256) private embarkedTokens;
@@ -31,15 +25,6 @@ contract MermaidsSeaDrop is AccessControl, IMermaidMechanics {
   mapping (uint256 => uint256) private eggsLaid;
   mapping (uint256 => uint256) private parents; // tracks the parents of a mermaid
   mapping (uint256 => uint256) private eggs; // tracks the egg that a mermaid hatched from (refers to tokenId in MermaidEggs contract)
-
-  uint256 mintRate = 0.01 ether;
-  uint256 limit = 1;
-
-  string internal _contractUri;
-  string internal _tokenUri;
-  
-  address payable public recipient;
-  uint internal balance = 0;
 
   event LayEgg(
       address indexed _invoker,
@@ -60,23 +45,11 @@ contract MermaidsSeaDrop is AccessControl, IMermaidMechanics {
   event Conclude(address indexed _caller, uint256 indexed _tokenId, uint256 indexed _blockAge);
 
   modifier allowableMechanic(address owner, address sender, uint256 tokenId) {
-
+    _;
   }
 
-  modifier onlyOwnerOrApprover(address from, uint256 id) {
-      bool isApproved = from == _msgSender() || isApprovedForAll(from, _msgSender());
-      if (!isApproved) {
-          revert(
-              string(
-                  abi.encodePacked(
-                      "AccessControl: account ",
-                      Strings.toHexString(uint160(from), 20),
-                      " is not approved "
-                  )
-              )
-          );
-      }
-      _;
+  constructor() {
+    _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }
 
   function roost(address owner, uint256 tokenId) public allowableMechanic(owner, _msgSender(), tokenId) {
@@ -138,7 +111,6 @@ contract MermaidsSeaDrop is AccessControl, IMermaidMechanics {
       address to,
       uint256 parentMermaidTokenId, 
       uint256 eggTokenId) public onlyRole(EGG_HATCHER_ROLE) {
-      _mint(to, 1);
       parents[currentAvailableEggMintId] = parentMermaidTokenId;
       eggs[currentAvailableEggMintId] = eggTokenId;
 
@@ -147,23 +119,16 @@ contract MermaidsSeaDrop is AccessControl, IMermaidMechanics {
   }
 
   /* TODO: Override burn mechanics as well to prevent when staking */
-  function safeTransferFrom(
+  function safeTransferFromCheck(
       address from,
       address to,
       uint256 tokenId
   ) public override 
   {
       require(
-          from == _msgSender() || isApprovedForAll(from, _msgSender()),
-          "MermaidsSeaDrop: caller is not owner nor approved"
-      );
-
-      require(
           roostedTokens[tokenId] == uint256(0) && embarkedTokens[tokenId] == uint256(0),
           "That Mermaid must be out of the cove."
       );
-
-      ERC721SeaDrop.safeTransferFrom(from, to, tokenId);
   }
 }
 
