@@ -36,12 +36,14 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
 
   constructor(string memory name,
       string memory symbol,
+      string memory tokenUri,
       address[] memory allowedSeaDrop,
       address mermaidMechanicsAddress) ERC721SeaDrop(name, symbol, allowedSeaDrop) {
       _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
       _grantRole(URI_SETTER_ROLE, msg.sender);
       recipient = payable(msg.sender);
       mermaidMechanics = IMermaidMechanics(mermaidMechanicsAddress);
+      _tokenUri = tokenUri;
   }
 
   modifier onlyOwnerOrApprover(address from, uint256 id) {

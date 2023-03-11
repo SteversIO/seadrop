@@ -108,7 +108,7 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
       emit Conclude(_msgSender(), tokenId, blockAge);
   }
   
-  function layEgg(address owner, uint256 mermaidTokenId, address to) public onlyRole(GAIA_ROLE) {
+  function layEgg(address owner, uint256 mermaidTokenId, address to) public allowableMechanic(owner, _msgSender(), mermaidTokenId) onlyRole(GAIA_ROLE) {
       eggsLaid[mermaidTokenId] = eggsLaid[mermaidTokenId] + 1;
       emit LayEgg(_msgSender(), to, mermaidTokenId);
   }
