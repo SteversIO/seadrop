@@ -2,7 +2,7 @@ import { Wallet } from "ethers";
 
 async function main() {
   console.log("Converting mnemonic to wallet keys");
-  let mnemonic = "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat";
+  let mnemonic = "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat"
   
   const addresses = [];
   for(let i=0; i<10; i++) {

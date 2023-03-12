@@ -31,19 +31,30 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   uint256 mintRate = 0.01 ether;
   string internal _contractUri;
   string internal _tokenUri;
+  uint256 _maxMermaidChildrenSupply;
+  uint256 _currentMermaidChildren = 0;
 
   IMermaidMechanics mermaidMechanics;
 
   constructor(string memory name,
       string memory symbol,
-      string memory tokenUri,
       address[] memory allowedSeaDrop,
+      string memory tokenUri,
+      string memory contractUri,
+      uint256 maxGenesisMermaidSupply,
+      uint256 maxMermaidChildrenSupply,
       address mermaidMechanicsAddress) ERC721SeaDrop(name, symbol, allowedSeaDrop) {
       _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
       _grantRole(URI_SETTER_ROLE, msg.sender);
+
       recipient = payable(msg.sender);
       mermaidMechanics = IMermaidMechanics(mermaidMechanicsAddress);
+
       _tokenUri = tokenUri;
+      this.setContractURI(contractUri);
+
+      this.setMaxSupply(maxGenesisMermaidSupply);
+      _maxMermaidChildrenSupply = maxMermaidChildrenSupply;
   }
 
   modifier onlyOwnerOrApprover(address from, uint256 id) {
@@ -119,28 +130,30 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   }
 
   /** Mechanics */
-  function roost(uint256 tokenId) public {
+  function roost(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
+    mermaidMechanics.roost(_msgSender(), tokenId);
+  }
+  function unroost(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
+    mermaidMechanics.unroost(_msgSender(), tokenId);
+  }
+  function embark(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
+    mermaidMechanics.embark(_msgSender(), tokenId);
+  }
 
-  }
-  function unroost(uint256 tokenId) public {
-    
-  }
-  function embark(uint256 tokenId) public {
-    
-  }
-
-  function conclude(uint256 tokenId) public {
-    
+  function conclude(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
+    mermaidMechanics.conclude(_msgSender(), tokenId);
   }
   
   function layEgg(uint256 mermaidTokenId, address to) public {
-
+    mermaidMechanics.layEgg(_msgSender(), mermaidTokenId, to);
   }
 
   function birth(address to,
       uint256 parentMermaidTokenId, 
       uint256 eggTokenId) public {
-    mermaidMechanics.birth(to, parentMermaidTokenId, eggTokenId);
-    _mint(to, 1);
+    require(_currentMermaidChildren + 1 <= _maxMermaidChildrenSupply, "No more eggs can hatch.");
+
+    mermaidMechanics.birth(_msgSender(), to, parentMermaidTokenId, eggTokenId);
+    _safeMint(to, 1);
   }
 }

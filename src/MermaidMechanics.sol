@@ -50,7 +50,8 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
   event Embark(address indexed _caller, uint256 indexed _tokenId);
   event Conclude(address indexed _caller, uint256 indexed _tokenId, uint256 indexed _blockAge);
 
-  modifier allowableMechanic(address owner, address sender, uint256 tokenId) {
+  modifier onlyRoleFor(bytes32 role, address account) {
+    _checkRole(role, account);
     _;
   }
 
@@ -58,7 +59,7 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
     _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
   }
 
-  function roost(address owner, uint256 tokenId) public allowableMechanic(owner, _msgSender(), tokenId) {
+  function roost(address owner, uint256 tokenId) public {
       require(
           roostedTokens[tokenId] == uint256(0), 
           "She is already roosting."
@@ -69,10 +70,10 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
       );
 
       roostedTokens[tokenId] = block.number;
-      emit Roost(_msgSender(), tokenId);
+      emit Roost(owner, tokenId);
   }
 
-  function embark(address owner, uint256 tokenId) public allowableMechanic(owner, _msgSender(), tokenId) {
+  function embark(address owner, uint256 tokenId) public {
       require(
           roostedTokens[tokenId] == uint256(0),
           "She is already on her journey"
@@ -83,10 +84,10 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
       );
 
       embarkedTokens[tokenId] = block.number;
-      emit Embark(_msgSender(), tokenId);
+      emit Embark(owner, tokenId);
   }
 
-  function unroost(address owner, uint256 tokenId) public allowableMechanic(owner, _msgSender(), tokenId) {
+  function unroost(address owner, uint256 tokenId) public {
       require(
           roostedTokens[tokenId] != uint256(0), 
           "She is not roosting."
@@ -94,10 +95,10 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
 
       uint blockAge = block.number - roostedTokens[tokenId];
       roostedTokens[tokenId] = uint256(0);
-      emit Unroost(_msgSender(), tokenId, blockAge);
+      emit Unroost(owner, tokenId, blockAge);
   }
 
-  function conclude(address owner, uint256 tokenId) public allowableMechanic(owner, _msgSender(), tokenId) {
+  function conclude(address owner, uint256 tokenId) public {
       require(
           embarkedTokens[tokenId] != uint256(0),
           "She is not on a journey"
@@ -105,23 +106,24 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
 
       uint blockAge = block.number - embarkedTokens[tokenId];
       embarkedTokens[tokenId] = 0;
-      emit Conclude(_msgSender(), tokenId, blockAge);
+      emit Conclude(owner, tokenId, blockAge);
   }
   
-  function layEgg(address owner, uint256 mermaidTokenId, address to) public allowableMechanic(owner, _msgSender(), mermaidTokenId) onlyRole(GAIA_ROLE) {
-      eggsLaid[mermaidTokenId] = eggsLaid[mermaidTokenId] + 1;
-      emit LayEgg(_msgSender(), to, mermaidTokenId);
+  function layEgg(address operator, uint256 mermaidTokenId, address to) public onlyRoleFor(GAIA_ROLE, operator) {
+    eggsLaid[mermaidTokenId] = eggsLaid[mermaidTokenId] + 1;
+    emit LayEgg(operator, to, mermaidTokenId);
   }
 
   function birth (
-      address to,
-      uint256 parentMermaidTokenId, 
-      uint256 eggTokenId) public onlyRole(EGG_HATCHER_ROLE) {
-      parents[currentAvailableEggMintId] = parentMermaidTokenId;
-      eggs[currentAvailableEggMintId] = eggTokenId;
+    address operator, 
+    address to,
+    uint256 parentMermaidTokenId, 
+    uint256 eggTokenId) public onlyRoleFor(EGG_HATCHER_ROLE, operator) {
+    parents[currentAvailableEggMintId] = parentMermaidTokenId;
+    eggs[currentAvailableEggMintId] = eggTokenId;
 
-      currentAvailableEggMintId = currentAvailableEggMintId + 1;
-      emit EggHatched(to, currentAvailableEggMintId, eggTokenId);
+    currentAvailableEggMintId = currentAvailableEggMintId + 1;
+    emit EggHatched(to, currentAvailableEggMintId, eggTokenId);
   }
 
   /* TODO: Override burn mechanics as well to prevent when staking */

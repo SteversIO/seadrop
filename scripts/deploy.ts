@@ -2,14 +2,22 @@ import { ethers } from "hardhat";
 
 async function main() {
   console.log(`Starting deployments of Mermaids and mechanics.`);
-  const deployedMechanicsAdress = await deployMermaidMechanics();
+  const deployedMechanicsAddress = await deployMermaidMechanics();
 
   const MermaidsSeaDrop = await ethers.getContractFactory("MermaidsSeaDrop");
   const name = "Mermaids";
   const symbol = "MMMCL";
   const allowedSeaDrop: any[] = [];
+
   const tokenUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids/{id}';
-  const mermaidsSeaDrop = await MermaidsSeaDrop.deploy(name, symbol, tokenUri, allowedSeaDrop, deployedMechanicsAdress);
+  const contractUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids';
+
+  const maxGenesisMermaidSupply = 3333;
+  const maxMermaidChildrenSupply = 6667;
+
+  const mermaidsSeaDrop = await MermaidsSeaDrop.deploy(
+    name, symbol, allowedSeaDrop, 
+    tokenUri, contractUri, maxGenesisMermaidSupply, maxMermaidChildrenSupply, deployedMechanicsAddress);
 
   await mermaidsSeaDrop.deployed();
 
