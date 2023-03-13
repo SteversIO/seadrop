@@ -31,8 +31,12 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   uint256 mintRate = 0.01 ether;
   string internal _contractUri;
   string internal _tokenUri;
-  uint256 _maxMermaidChildrenSupply;
-  uint256 _currentMermaidChildren = 0;
+
+  uint256 _currentGenesisSupply = 0;
+  uint256 _maxGenesisSupply = 3333;
+
+  uint256 _currentChildSupply = 0;
+  uint256 _maxChildSupply = 6667;
 
   IMermaidMechanics mermaidMechanics;
 
@@ -40,19 +44,12 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
       string memory symbol,
       address[] memory allowedSeaDrop,
       string memory tokenUri,
-      uint256 maxMermaidChildrenSupply,
       address mermaidMechanicsAddress) ERC721SeaDrop(name, symbol, allowedSeaDrop) {
       _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
       _grantRole(URI_SETTER_ROLE, msg.sender);
 
       recipient = payable(msg.sender);
       mermaidMechanics = IMermaidMechanics(mermaidMechanicsAddress);
-
-      // set contract Uri manually
-      _tokenUri = tokenUri;
-      
-      // set max supply manually
-      _maxMermaidChildrenSupply = maxMermaidChildrenSupply;
   }
 
   modifier onlyOwnerOrApprover(address from, uint256 id) {
@@ -75,48 +72,17 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
     mintRate = updatedMintRate;
   }
 
-  function _baseURI() internal view virtual override returns (string memory) {
-      return _tokenUri;
-  }
-
-  function setURI(string memory newuri) public onlyRole(URI_SETTER_ROLE) {
-    _tokenUri = newuri;
-  }
-
-  /* TODO: Override burn mechanics as well to prevent when staking */
-  function safeTransferFrom(
-      address from,
-      address to,
-      uint256 tokenId
-  ) public override 
-  {
-      require(
-          from == _msgSender() || isApprovedForAll(from, _msgSender()),
-          "Not owner nor approved"
-      );
-
-      mermaidMechanics.safeTransferFromCheck(from, to, tokenId);
-
-      ERC721SeaDrop.safeTransferFrom(from, to, tokenId);
-  }
-
-  function checkMintLimit(uint256 quantity) internal {
-    if ((_totalMinted() + quantity) > (maxSupply() + _currentMermaidChildren)) {
-        revert MintQuantityExceedsMaxSupply(
-            _totalMinted() + quantity,
-            maxSupply()
-        );
-    }
+  function mintSeaDrop(address minter, uint256 quantity)
+        public
+        virtual
+        override {
+    checkGenesisMaxSupply(quantity);
+    super.mintSeaDrop(minter, quantity);
   }
 
   function mint(uint256 quantity) payable public {
-    checkMintLimit(quantity);
-    // if (_totalMinted() + quantity > maxSupply()) {
-    //     revert MintQuantityExceedsMaxSupply(
-    //         _totalMinted() + quantity,
-    //         maxSupply()
-    //     );
-    // }
+    checkGenesisMaxSupply(quantity);
+    checkMaxSupply(quantity);
 
     require(msg.value >= (quantity * mintRate), "Not enough ether sent."); // string.concat("Not enough ether sent. You need", Strings.toString(amount * mintRate)));
     balance += msg.value;
@@ -136,6 +102,40 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
       returns (bool)
   {
       return super.supportsInterface(interfaceId);
+  }
+
+  /** Overrides */
+   function safeTransferFrom(
+      address from,
+      address to,
+      uint256 tokenId
+  ) public override 
+  {
+      require(
+          from == _msgSender() || isApprovedForAll(from, _msgSender()),
+          "Not owner nor approved"
+      );
+
+      mermaidMechanics.safeTransferFromCheck(from, to, tokenId);
+      ERC721SeaDrop.safeTransferFrom(from, to, tokenId);
+  }
+
+  /** Helpers */
+  function checkMaxSupply(uint256 quantity) internal {
+    if ((_totalMinted() + quantity) > maxSupply()) {
+        revert MintQuantityExceedsMaxSupply(
+            _totalMinted() + quantity,
+            maxSupply()
+        );
+    }
+  }
+
+  function checkGenesisMaxSupply(uint256 quantity) internal {
+    if(_currentGenesisSupply + quantity > _maxGenesisSupply) {
+      revert MintQuantityExceedsMaxSupply(
+        _currentGenesisSupply + quantity,
+        _maxGenesisSupply);
+    }
   }
 
   /** Mechanics */
@@ -160,7 +160,7 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   function birth(address to,
       uint256 parentMermaidTokenId, 
       uint256 eggTokenId) public {
-    require(_currentMermaidChildren + 1 <= _maxMermaidChildrenSupply, "No more eggs can hatch.");
+    require(_currentChildSupply + 1 <= _maxChildSupply, "No more eggs can hatch.");
 
     mermaidMechanics.birth(_msgSender(), to, parentMermaidTokenId, eggTokenId);
     _safeMint(to, 1);

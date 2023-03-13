@@ -9,24 +9,28 @@ async function main() {
   const symbol = "MMMCL";
   const allowedSeaDrop: any[] = [];
 
-  const tokenUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids/{id}';
+  const baseUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids/'; // omit {id} from URL for baseUri
   const contractUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids';
 
-  const maxGenesisMermaidSupply = 3333;
-  const maxMermaidChildrenSupply = 6667;
+  // These are hard-coded into smart contract now.
+  const maxGenesisSupply = 3333;
+  const maxChildSupply = 6667;
+  const maxSupply = maxGenesisSupply + maxChildSupply;
 
   const mermaidsSeaDrop = await MermaidsSeaDrop.deploy(
     name, symbol, allowedSeaDrop, 
-    tokenUri, maxMermaidChildrenSupply, deployedMechanicsAddress);
+    deployedMechanicsAddress);
 
   await mermaidsSeaDrop.deployed();
 
+  await mermaidsSeaDrop.setBaseURI(baseUri);
+
   console.log(
-    `MermaidsSeaDrop deployed to ${mermaidsSeaDrop.address} with tokenUri ${tokenUri}`
+    `MermaidsSeaDrop deployed to ${mermaidsSeaDrop.address} with tokenUri ${baseUri}`
   );
 
-  await mermaidsSeaDrop.setMaxSupply(maxGenesisMermaidSupply);
-  console.log(`Max supply set to ${maxGenesisMermaidSupply}`);
+  await mermaidsSeaDrop.setMaxSupply(maxSupply);
+  console.log(`Max supply set to ${maxSupply}`);
 
   await mermaidsSeaDrop.setContractURI(contractUri);
   console.log(`Contract URI set to ${contractUri}`);

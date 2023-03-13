@@ -60,7 +60,7 @@ contract ERC721PartnerSeaDrop is ERC721SeaDrop, TwoStepAdministered {
      * @param quantity The number of tokens to mint.
      */
     function mintSeaDrop(address minter, uint256 quantity)
-        external
+        public
         virtual
         override
     {

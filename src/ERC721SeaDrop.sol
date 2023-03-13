@@ -179,7 +179,7 @@ contract ERC721SeaDrop is
      * @param quantity The number of tokens to mint.
      */
     function mintSeaDrop(address minter, uint256 quantity)
-        external
+        public
         virtual
         override
         nonReentrant
