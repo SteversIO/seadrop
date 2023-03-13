@@ -2,6 +2,15 @@ import { ethers } from "hardhat";
 
 async function main() {
   console.log(`Starting deployments of Mermaids and mechanics.`);
+
+  const blockNumber = await ethers.provider.getBlockNumber();
+  console.log(`Block # is ${blockNumber}`);
+
+  const [owner] = await ethers.getSigners();
+
+  const balanceInEth = await getBalance(owner.address);
+  console.log(`Balance is ${balanceInEth} eth for ${owner.address}`);
+
   const deployedMechanicsAddress = await deployMermaidMechanics();
 
   const MermaidsSeaDrop = await ethers.getContractFactory("MermaidsSeaDrop");
@@ -24,9 +33,14 @@ async function main() {
   await mermaidsSeaDrop.deployed();
 
   await mermaidsSeaDrop.setBaseURI(baseUri);
+  await mermaidsSeaDrop.setContractURI(contractUri);
 
+  const etherMintCostPerNft = 0.0001;
+  const mintCost = ethers.utils.parseUnits(`${etherMintCostPerNft}`, "ether");
+  await mermaidsSeaDrop.setMintCost(mintCost);
+  console.log(`Set mint cost to ${etherMintCostPerNft}`);
   console.log(
-    `MermaidsSeaDrop deployed to ${mermaidsSeaDrop.address} with tokenUri ${baseUri}`
+    `MermaidsSeaDrop deployed to ${mermaidsSeaDrop.address} with tokenUri ${baseUri} and contractUri ${contractUri}`
   );
 
   await mermaidsSeaDrop.setMaxSupply(maxSupply);
@@ -45,6 +59,12 @@ async function deployMermaidMechanics() {
     );
 
   return mermaidMechanics.address;
+}
+
+async function getBalance(address: string) {
+  const balance = await ethers.provider.getBalance(address);
+  const balanceInEth = ethers.utils.formatEther(balance);
+  return balanceInEth;
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -45,6 +45,10 @@ const config: HardhatUserConfig = {
       url: `https://goerli.infura.io/v3/${infuraKey}`,
       accounts: ["your private key not mnemonic"]
     },
+    ganache: {
+      url: `http://172.24.160.1:9001`, // Ganache network.
+      accounts: ["a1e90398cad08ce1914775d7a9c1dd231b7d28baef1311edceb8f577eeddc5ec"],
+    },
     hardhat: {
       blockGasLimit: 30_000_000,
       throwOnCallFailures: false,
