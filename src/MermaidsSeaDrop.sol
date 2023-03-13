@@ -100,17 +100,28 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
       ERC721SeaDrop.safeTransferFrom(from, to, tokenId);
   }
 
-  function mint(uint256 quantity) payable public {
-    if (_totalMinted() + quantity > maxSupply()) {
+  function checkMintLimit(uint256 quantity) internal {
+    if ((_totalMinted() + quantity) > (maxSupply() + _currentMermaidChildren)) {
         revert MintQuantityExceedsMaxSupply(
             _totalMinted() + quantity,
             maxSupply()
         );
     }
-      require(msg.value >= (quantity * mintRate), "Not enough ether sent."); // string.concat("Not enough ether sent. You need", Strings.toString(amount * mintRate)));
-      balance += msg.value;
+  }
 
-      _safeMint(_msgSender(), quantity);
+  function mint(uint256 quantity) payable public {
+    checkMintLimit(quantity);
+    // if (_totalMinted() + quantity > maxSupply()) {
+    //     revert MintQuantityExceedsMaxSupply(
+    //         _totalMinted() + quantity,
+    //         maxSupply()
+    //     );
+    // }
+
+    require(msg.value >= (quantity * mintRate), "Not enough ether sent."); // string.concat("Not enough ether sent. You need", Strings.toString(amount * mintRate)));
+    balance += msg.value;
+
+    _safeMint(_msgSender(), quantity);
   }
 
   function withdraw() public {
