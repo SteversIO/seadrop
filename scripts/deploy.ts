@@ -17,13 +17,19 @@ async function main() {
 
   const mermaidsSeaDrop = await MermaidsSeaDrop.deploy(
     name, symbol, allowedSeaDrop, 
-    tokenUri, contractUri, maxGenesisMermaidSupply, maxMermaidChildrenSupply, deployedMechanicsAddress);
+    tokenUri, maxMermaidChildrenSupply, deployedMechanicsAddress);
 
   await mermaidsSeaDrop.deployed();
 
   console.log(
     `MermaidsSeaDrop deployed to ${mermaidsSeaDrop.address} with tokenUri ${tokenUri}`
   );
+
+  await mermaidsSeaDrop.setMaxSupply(maxGenesisMermaidSupply);
+  console.log(`Max supply set to ${maxGenesisMermaidSupply}`);
+
+  await mermaidsSeaDrop.setContractURI(contractUri);
+  console.log(`Contract URI set to ${contractUri}`);
 }
 
 async function deployMermaidMechanics() {

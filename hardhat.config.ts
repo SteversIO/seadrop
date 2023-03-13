@@ -43,7 +43,7 @@ const config: HardhatUserConfig = {
   networks: {
     goerli: {
       url: `https://goerli.infura.io/v3/${infuraKey}`,
-      accounts: ["your private key not mnemonic"]
+      accounts: ["some private key"]
     },
     hardhat: {
       blockGasLimit: 30_000_000,

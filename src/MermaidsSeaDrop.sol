@@ -40,8 +40,6 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
       string memory symbol,
       address[] memory allowedSeaDrop,
       string memory tokenUri,
-      string memory contractUri,
-      uint256 maxGenesisMermaidSupply,
       uint256 maxMermaidChildrenSupply,
       address mermaidMechanicsAddress) ERC721SeaDrop(name, symbol, allowedSeaDrop) {
       _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -50,10 +48,10 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
       recipient = payable(msg.sender);
       mermaidMechanics = IMermaidMechanics(mermaidMechanicsAddress);
 
+      // set contract Uri manually
       _tokenUri = tokenUri;
-      this.setContractURI(contractUri);
-
-      this.setMaxSupply(maxGenesisMermaidSupply);
+      
+      // set max supply manually
       _maxMermaidChildrenSupply = maxMermaidChildrenSupply;
   }
 
