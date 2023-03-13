@@ -15,7 +15,7 @@ const assert = require("assert");
  // HARDHAT_NETWORK=goerli npx mocha --debug-brk --inspect --require ts-node/register scripts/**/*.spec.ts
 
 describe("Test Hardness Setup", function() {
-  this.timeout(5000);
+  this.timeout(200000);
   const mechanicsAddress = '0xdB557e6c848Be27c202Fe16751110A7E3fb34dcB'; // goerli
   const mermaidsAddress = '0x0F83ef3DF096dDd9f408Ac2a72756ec46e1aAD2f'; // goerli
   let mermaidMechanics: Contract;
@@ -59,7 +59,14 @@ describe("Test Hardness Setup", function() {
 
       while(counter < 10 && totalSupply < expectedMaxSupply) {
         // TODO: Mint!
-        
+        const gasPrice = await ethers.provider.getGasPrice();
+        const options = {
+          value: ethers.utils.parseUnits("0.01", "ether"),
+          gasPrice,
+          gasLimit: 302133,
+        };
+
+        const tx = await mermaidsSeaDrop.mint(1, options);
         totalSupply = await mermaidsSeaDrop.totalSupply();
         counter++;
       }
