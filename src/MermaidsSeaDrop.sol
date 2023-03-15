@@ -22,11 +22,15 @@ import {
     Strings
 } from "openzeppelin-contracts/utils/Strings.sol";
 
-event GenesisMermaid(address indexed to, uint256 indexed quantity);
-event ChildMermaid(address indexed to, uint256 indexed quantity);
-
 /// @custom:security-contact steve@megacatstudios.com
 contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOperator {
+
+  event GenesisMermaid(address indexed to, uint256 indexed quantity, uint256 indexed startTokenId);
+  event ChildMermaid(address indexed to, uint256 indexed quantity, uint256 indexed startTokenId);
+
+  event TokenLocked(uint256 tokenId, address approvedContract);
+  event TokenUnlocked(uint256 tokenId, address approvedContract);
+
   bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
 
   address payable public recipient;
@@ -36,10 +40,10 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   string internal _tokenUri;
 
   uint256 _currentGenesisSupply = 0;
-  uint256 _maxGenesisSupply = 3333;
+  uint256 internal _maxGenesisSupply = 100; // 3333
 
   uint256 _currentChildSupply = 0;
-  uint256 _maxChildSupply = 6667;
+  uint256 internal _maxChildSupply = 10; // 6667
 
   IMermaidMechanics mermaidMechanics;
 
@@ -91,7 +95,7 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
     balance += msg.value;
     
     _safeMint(_msgSender(), quantity);
-    postGenesis(minter, quantity);
+    postGenesis(_msgSender(), quantity);
   }
 
   function withdraw() public {
@@ -125,9 +129,9 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   }
 
   /** Helpers */
-  function postGenesis(quantity) internal {
+  function postGenesis(address minter, uint256 quantity) internal {
     _currentGenesisSupply = _currentGenesisSupply + quantity;
-    emit GenesisMermaid(minter, quantity);
+    emit GenesisMermaid(minter, quantity, _nextTokenId() - quantity);
   }
 
   function checkMaxSupply(uint256 quantity) internal {
@@ -150,16 +154,20 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   /** Mechanics */
   function roost(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
     mermaidMechanics.roost(_msgSender(), tokenId);
+    emit TokenLocked(tokenId, address(_msgSender()));
   }
   function unroost(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
     mermaidMechanics.unroost(_msgSender(), tokenId);
+    emit TokenUnlocked(tokenId, address(_msgSender()));
   }
   function embark(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
     mermaidMechanics.embark(_msgSender(), tokenId);
+    emit TokenLocked(tokenId, address(_msgSender()));
   }
 
   function conclude(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
     mermaidMechanics.conclude(_msgSender(), tokenId);
+    emit TokenUnlocked(tokenId, address(_msgSender()));
   }
   
   function layEgg(uint256 mermaidTokenId, address to) public {
@@ -173,6 +181,6 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
     mermaidMechanics.birth(_msgSender(), to, parentMermaidTokenId, eggTokenId);
     _safeMint(to, 1);
     _currentChildSupply = _currentChildSupply + 1;
-    emit ChildMermaid(to, 1);
+    emit ChildMermaid(to, 1, _nextTokenId() -1);
   }
 }

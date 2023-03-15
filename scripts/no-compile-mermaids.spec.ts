@@ -25,11 +25,15 @@ const assert = require("assert");
  const DEFAULT_TIMEOUT = 5000;
 describe("Test Hardness Setup", function() {
   this.timeout(DEFAULT_TIMEOUT);
-  const goerli_mechanicsAddress = '0xdB557e6c848Be27c202Fe16751110A7E3fb34dcB'; // goerli
-  const goerli_mermaidsAddress = '0x0F83ef3DF096dDd9f408Ac2a72756ec46e1aAD2f'; // goerli
+  const goerli_mechanicsAddress = '0x456D496Ac9d64Df077CfE94405662A57530C1e0a'; // goerli
+  const goerli_mermaidsAddress = '0x1A065B0F74Fd1B552E8f4Ad679379450E86C2bE0'; // goerli
 
-  const mechanicsAddress = '0xe518a18e6ae5E38a13713cFD51DEFE8822Fc3802'; // hardhat's localhost, spun up by hh-0node
-  const mermaidsAddress = '0x49524038751A657ccd1D42a8C04BAdDf08Dff94b'; // hardhat's localhost, spun up by hh-node
+  let mechanicsAddress = '0x506115dA29e7b24454788870Bf53D3f962A2c6dC'; // hardhat's localhost, spun up by hh-0node
+  let mermaidsAddress = '0x098aA8A99668C8458624D38A86749a5C41f4a7F9'; // hardhat's localhost, spun up by hh-node
+
+  mechanicsAddress = goerli_mechanicsAddress;
+  mermaidsAddress = goerli_mermaidsAddress;
+
   let mermaidMechanics: Contract;
   let mermaidsSeaDrop: Contract;
   let owner: any;
@@ -75,19 +79,29 @@ describe("Test Hardness Setup", function() {
       console.log(`Block # is ${blockNumber}`);
     })
 
-    const expectedMaxSupply = 10000;
+    const expectedMaxSupply = 110;
+
+    it("sets max supply", async () => {
+      const options = await defaultGasOptions();
+      const tx = await mermaidsSeaDrop.setMaxSupply(expectedMaxSupply);
+      console.log(`maxSupply set to: ${expectedMaxSupply}`);
+    })
+
     it("checks max supply", async () => {
       const maxSupply = await mermaidsSeaDrop.maxSupply();
       console.log(`maxSupply: ${maxSupply}`);
       assert.equal(maxSupply.toString(), expectedMaxSupply);
     });
 
-    const mintQuantity = 1;
+
+
+    const mintQuantity = 10;
     const etherMintCostPerNft = 0.0001;
     it(`sets mint cost to ${etherMintCostPerNft} ether`, async () => {
       // 100000000000000 wei
+      const options = await defaultGasOptions();
       const mintCost = ethers.utils.parseUnits(`${etherMintCostPerNft}`, "ether");
-      const tx = await mermaidsSeaDrop.setMintCost(mintCost);  // contract owner required for this call.
+      const tx = await mermaidsSeaDrop.setMintCost(mintCost, options);  // contract owner required for this call.
       assert.notEqual(tx.hash, undefined);
     });
 
@@ -98,9 +112,7 @@ describe("Test Hardness Setup", function() {
       console.log(`totalSupply: ${totalSupply}`);
 
       while(counter < loopCount && totalSupply < expectedMaxSupply) {
-        let gasPrice: BigNumber = await ethers.provider.getGasPrice();
-        const multiplier = 1.5; // avoids 'replacement fee too low' error.
-        gasPrice = multiply(gasPrice, multiplier);
+        let gasPrice: BigNumber = await estimateGas();
 
         const calculatedValue = mintQuantity * etherMintCostPerNft;
         const options = {
@@ -110,7 +122,8 @@ describe("Test Hardness Setup", function() {
         };
 
         const tx = await mermaidsSeaDrop.mint(mintQuantity, options);
-        console.log(`Mint@tx: ${tx.hash}`)
+        const balanceTx = await mermaidsSeaDrop.balanceOf(owner.address);
+        console.log(`Genesis Mint@tx: ${tx.hash}, balance now: ${balanceTx}`);
 
         totalSupply = await mermaidsSeaDrop.totalSupply();
         const balance = await getBalance(owner.address);
@@ -123,9 +136,10 @@ describe("Test Hardness Setup", function() {
 
     describe(`sets up birth properly and begins birthing`, async () => {
       it(`sets birth role for owner address`, async () => {
-        const eggHatcherRole = await mermaidMechanics.EGG_HATCHER_ROLE()
+        const options = await defaultGasOptions();
+        const eggHatcherRole = await mermaidMechanics.EGG_HATCHER_ROLE(options);
         const tx = await mermaidMechanics.grantRole(eggHatcherRole, owner.address);
-
+        console.log(`birth role set @tx: ${tx.hash}`)
         const hasRole = await mermaidMechanics.hasRole(eggHatcherRole, owner.address);
         assert.equal(hasRole, true);
       });
@@ -135,12 +149,14 @@ describe("Test Hardness Setup", function() {
         const parentMermaidTokenId = 333;
         const eggTokenId = 15;
 
-        const loop = 10;
+        const loop = 1;
 
         let counter = 0;
         while(counter < loop) {
-          const tx = await mermaidsSeaDrop.birth(to, parentMermaidTokenId, eggTokenId);
-          console.log(`Mint@tx: ${tx.hash}`)
+          const options = await defaultGasOptions();
+          const tx = await mermaidsSeaDrop.birth(to, parentMermaidTokenId, eggTokenId, options);
+          const balanceTx = await mermaidsSeaDrop.balanceOf(to);
+          console.log(`ChildMint@tx: ${tx.hash}, balance now: ${balanceTx}`);
           counter++;
         }
       })
@@ -152,6 +168,22 @@ async function getBalance(address: string) {
   const balance = await ethers.provider.getBalance(address);
   const balanceInEth = ethers.utils.formatEther(balance);
   return balanceInEth;
+}
+
+async function estimateGas() {
+  let gasPrice: BigNumber = await ethers.provider.getGasPrice();
+  const multiplier = 1.5; // avoids 'replacement fee too low' error.
+  gasPrice = multiply(gasPrice, multiplier);
+
+  return gasPrice;
+}
+
+async function defaultGasOptions() {
+  let gasPrice: BigNumber = await estimateGas();
+  return {
+    gasPrice,
+    gasLimit: 302133,
+  };
 }
 
 function multiply(

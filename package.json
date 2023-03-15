@@ -15,7 +15,7 @@
     "hh-node": "hardhat node",
     "mnemonic-to-key": "ts-node scripts/mnemonic.to.private.key.ts",
     "mnemonic-to-wallet": "ts-node scripts/wallets.from.mnemonic.ts",
-    "hh-deploy": "hardhat run --network ganache scripts/deploy.ts",
+    "hh-deploy": "hardhat run --network goerli scripts/deploy.ts",
     "hh-test": "hardhat test --network localhost --config ./hardhat.config.ts scripts/test-mermaids.ts",
     "hh-ganache-test": "HARDHAT_NETWORK=ganache mocha --require ts-node/register scripts/**/*.spec.ts",
     "profile": "REPORT_GAS=true hardhat test --config ./hardhat.config.ts",
