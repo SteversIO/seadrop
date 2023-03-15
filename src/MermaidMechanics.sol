@@ -114,7 +114,7 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
     emit LayEgg(operator, to, mermaidTokenId);
   }
 
-  function birth (
+  function birth(
     address operator, 
     address to,
     uint256 parentMermaidTokenId, 

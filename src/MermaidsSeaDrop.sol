@@ -22,6 +22,9 @@ import {
     Strings
 } from "openzeppelin-contracts/utils/Strings.sol";
 
+event GenesisMermaid(address indexed to, uint256 indexed quantity);
+event ChildMermaid(address indexed to, uint256 indexed quantity);
+
 /// @custom:security-contact steve@megacatstudios.com
 contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOperator {
   bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
@@ -77,6 +80,7 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
         override {
     checkGenesisMaxSupply(quantity);
     super.mintSeaDrop(minter, quantity);
+    postGenesis(minter, quantity);
   }
 
   function mint(uint256 quantity) payable public {
@@ -85,8 +89,9 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
 
     require(msg.value >= (quantity * mintRate), "Not enough ether sent."); // string.concat("Not enough ether sent. You need", Strings.toString(amount * mintRate)));
     balance += msg.value;
-
+    
     _safeMint(_msgSender(), quantity);
+    postGenesis(minter, quantity);
   }
 
   function withdraw() public {
@@ -120,6 +125,11 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   }
 
   /** Helpers */
+  function postGenesis(quantity) internal {
+    _currentGenesisSupply = _currentGenesisSupply + quantity;
+    emit GenesisMermaid(minter, quantity);
+  }
+
   function checkMaxSupply(uint256 quantity) internal {
     if ((_totalMinted() + quantity) > maxSupply()) {
         revert MintQuantityExceedsMaxSupply(
@@ -160,8 +170,9 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
       uint256 parentMermaidTokenId, 
       uint256 eggTokenId) public {
     require(_currentChildSupply + 1 <= _maxChildSupply, "No more eggs can hatch.");
-
     mermaidMechanics.birth(_msgSender(), to, parentMermaidTokenId, eggTokenId);
     _safeMint(to, 1);
+    _currentChildSupply = _currentChildSupply + 1;
+    emit ChildMermaid(to, 1);
   }
 }

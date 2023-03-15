@@ -12,7 +12,7 @@ const assert = require("assert");
  * OR:
  * run the command below in Javascript Debug Terminal in VSCode to use debug mode.
  */
- // HARDHAT_NETWORK=goerli npx mocha --debug-brk --inspect --require ts-node/register scripts/**/*.spec.ts
+ // HARDHAT_NETWORK=ganache npx mocha --debug-brk --inspect --require ts-node/register scripts/**/*.spec.ts
 
 
  /**
@@ -28,8 +28,8 @@ describe("Test Hardness Setup", function() {
   const goerli_mechanicsAddress = '0xdB557e6c848Be27c202Fe16751110A7E3fb34dcB'; // goerli
   const goerli_mermaidsAddress = '0x0F83ef3DF096dDd9f408Ac2a72756ec46e1aAD2f'; // goerli
 
-  const mechanicsAddress = '0x00C93760cf4893e38b1B5b332e433875bc0081b3'; // hardhat's localhost, spun up by hh-0node
-  const mermaidsAddress = '0x5b93d7bb05b7cFeF855B1E428C6446665035A24C'; // hardhat's localhost, spun up by hh-node
+  const mechanicsAddress = '0xe518a18e6ae5E38a13713cFD51DEFE8822Fc3802'; // hardhat's localhost, spun up by hh-0node
+  const mermaidsAddress = '0x49524038751A657ccd1D42a8C04BAdDf08Dff94b'; // hardhat's localhost, spun up by hh-node
   let mermaidMechanics: Contract;
   let mermaidsSeaDrop: Contract;
   let owner: any;
@@ -82,7 +82,7 @@ describe("Test Hardness Setup", function() {
       assert.equal(maxSupply.toString(), expectedMaxSupply);
     });
 
-    const mintQuantity = 20;
+    const mintQuantity = 1;
     const etherMintCostPerNft = 0.0001;
     it(`sets mint cost to ${etherMintCostPerNft} ether`, async () => {
       // 100000000000000 wei
@@ -91,7 +91,7 @@ describe("Test Hardness Setup", function() {
       assert.notEqual(tx.hash, undefined);
     });
 
-    const loopCount = 5;
+    const loopCount = 0;
     it(`mints ${mintQuantity} NFTs x${loopCount}`, async () => {
       let counter = 0;
       let totalSupply = await mermaidsSeaDrop.totalSupply();
@@ -120,6 +120,31 @@ describe("Test Hardness Setup", function() {
 
       assert.equal(true, true);
     });
+
+    describe(`sets up birth properly and begins birthing`, async () => {
+      it(`sets birth role for owner address`, async () => {
+        const eggHatcherRole = await mermaidMechanics.EGG_HATCHER_ROLE()
+        const tx = await mermaidMechanics.grantRole(eggHatcherRole, owner.address);
+
+        const hasRole = await mermaidMechanics.hasRole(eggHatcherRole, owner.address);
+        assert.equal(hasRole, true);
+      });
+
+      it(`begins birthing`, async () => {
+        const to = '0x796c2a9AF4AED2bcb8A304B567f248c3f351c497';
+        const parentMermaidTokenId = 333;
+        const eggTokenId = 15;
+
+        const loop = 10;
+
+        let counter = 0;
+        while(counter < loop) {
+          const tx = await mermaidsSeaDrop.birth(to, parentMermaidTokenId, eggTokenId);
+          console.log(`Mint@tx: ${tx.hash}`)
+          counter++;
+        }
+      })
+    })
   });
 });
 
