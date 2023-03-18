@@ -1,3 +1,4 @@
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 
 async function main() {
@@ -16,7 +17,10 @@ async function main() {
   const MermaidsSeaDrop = await ethers.getContractFactory("MermaidsSeaDrop");
   const name = "Mermaids";
   const symbol = "MMMCL";
-  const allowedSeaDrop: any[] = [];
+
+  // Deployed by OpenSea, manages the SeaDropToken contracts (like our MermaidsSeaDrop).
+  const seadrop = '0x00005EA00Ac477B1030CE78506496e8C2dE24bf5';
+  const allowedSeaDrop: any[] = [seadrop];
 
   const baseUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids/'; // omit {id} from URL for baseUri
   const contractUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids';
@@ -29,6 +33,15 @@ async function main() {
   const mermaidsSeaDrop = await MermaidsSeaDrop.deploy(
     name, symbol, allowedSeaDrop, 
     deployedMechanicsAddress);
+
+    const publicDrop = {
+      mintPrice: "100000000000000000", // 0.1 ether      
+      startTime: Math.round(Date.now() / 1000) - 100,
+      endTime: Math.round(Date.now() / 1000) + 100,
+      maxTotalMintableByWallet: 10,
+      feeBps: 1000, // 10%
+      restrictFeeRecipients: true,
+    };
 
   await mermaidsSeaDrop.deployed();
 
@@ -48,6 +61,17 @@ async function main() {
 
   await mermaidsSeaDrop.setContractURI(contractUri);
   console.log(`Contract URI set to ${contractUri}`);
+
+  const options = await defaultGasOptions();
+
+  let tx = await mermaidsSeaDrop.updateCreatorPayoutAddress(seadrop, owner.address, options);
+  console.log(`Updating creator payout address @tx: ${tx.hash}`);
+
+  tx = await mermaidsSeaDrop.updateAllowedFeeRecipient(seadrop, owner.address, true, options);
+  console.log(`Updating allowed fee recipient@tx: ${tx.hash}`);
+
+  tx = await mermaidsSeaDrop.updatePublicDrop(seadrop, publicDrop, options);
+  console.log(`Updating public drop@tx: ${tx.hash}`);
 }
 
 async function deployMermaidMechanics() {
@@ -73,3 +97,30 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+async function defaultGasOptions() {
+  let gasPrice: BigNumber = await estimateGas();
+  return {
+    gasPrice,
+    gasLimit: 302133,
+  };
+}
+
+async function estimateGas() {
+  let gasPrice: BigNumber = await ethers.provider.getGasPrice();
+  const multiplier = 2.5; // avoids 'replacement fee too low' error.
+  gasPrice = multiply(gasPrice, multiplier);
+
+  return gasPrice;
+}
+
+function multiply(
+  bn: BigNumber | string,
+  number: number,
+): BigNumber {
+  const oneDotZero: BigNumber = ethers.utils.parseUnits("1", 18);
+  const bnForSure = BigNumber.from(bn);
+  const numberBN = ethers.utils.parseUnits(number.toString(), 18);
+
+  return bnForSure.mul(numberBN).div(oneDotZero);
+}

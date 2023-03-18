@@ -152,14 +152,24 @@ contract MermaidsSeaDrop is ERC721SeaDrop, AccessControl, IMermaidMechanicsOpera
   }
 
   /** Mechanics */
+  function getCurrentGenesisSupply() public view returns (uint256) {
+    return _currentGenesisSupply;
+  }
+
+  function getCurrentChildSupply() public view returns (uint256) {
+    return _currentChildSupply;
+  }
+
   function roost(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
     mermaidMechanics.roost(_msgSender(), tokenId);
     emit TokenLocked(tokenId, address(_msgSender()));
   }
+
   function unroost(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
     mermaidMechanics.unroost(_msgSender(), tokenId);
     emit TokenUnlocked(tokenId, address(_msgSender()));
   }
+  
   function embark(uint256 tokenId) public onlyOwnerOrApprover(_msgSender(), tokenId) {
     mermaidMechanics.embark(_msgSender(), tokenId);
     emit TokenLocked(tokenId, address(_msgSender()));
