@@ -13,14 +13,18 @@ import {
   IMermaidMechanics
 } from "./IMermaidMechanics.sol";
 
-import {
-  ERC721SeaDrop
-} from "./ERC721SeaDrop.sol";
-
 /// @custom:security-contact steve@megacatstudios.com
 contract MermaidMechanics is AccessControl, IMermaidMechanics {
   bytes32 public constant GAIA_ROLE = keccak256("GAIA_ROLE");
   bytes32 public constant EGG_HATCHER_ROLE = keccak256("EGG_HATCHER_ROLE");
+  
+  uint256 public currentAvailableTokenId = 1;
+  uint256 mintLimit = 3333;
+
+  uint256 public currentAvailableEggMintId = 3334;
+  uint256 eggMintLimit = 10000;
+
+  address operator = address(0);
 
   mapping (uint256 => uint256) private roostedTokens;
   mapping (uint256 => uint256) private embarkedTokens;
@@ -48,29 +52,29 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
   event Embark(address indexed _caller, uint256 indexed _tokenId);
   event Conclude(address indexed _caller, uint256 indexed _tokenId, uint256 indexed _blockAge);
 
-  ERC721SeaDrop mermaids;
-
   modifier onlyRoleFor(bytes32 role, address account) {
     _checkRole(role, account);
     _;
   }
 
-  modifier onlyOperator(address operator, uint256 tokenId) {
-    address owner = ownerOf(tokenId);
-    require(mermaids.isApprovedForAll(owner, operator), "Not an operator for owner.");
+  modifier onlyOperator() {
+    require(_msgSender() == operator, "Only operator contract allowed.");
     _;
   }
 
-  constructor(address mermaidsAddress) {
+  constructor() {
     _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    setMermaids(mermaidsAddress);
   }
 
-  function setMermaids(address mermaidsAddress) public onlyRole(DEFAULT_ADMIN_ROLE) {
-    mermaids = ERC721SeaDrop(mermaidsAddress);
+  function setOperator(address _operator) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    operator = _operator;
   }
 
-  function roost(uint256 tokenId) public onlyOperator(msg.sender, tokenId) {
+  function getOperator() public view returns(address) {
+    return operator;
+  }
+
+  function roost(address owner, uint256 tokenId) public onlyOperator() {
       require(
           roostedTokens[tokenId] == uint256(0), 
           "She is already roosting."
@@ -81,10 +85,10 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
       );
 
       roostedTokens[tokenId] = block.number;
-      emit Roost(msg.sender, tokenId);
+      emit Roost(owner, tokenId);
   }
 
-  function embark(uint256 tokenId) public onlyOperator(msg.sender, tokenId) {
+  function embark(address owner, uint256 tokenId) public onlyOperator() {
       require(
           roostedTokens[tokenId] == uint256(0),
           "She is already on her journey"
@@ -95,10 +99,10 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
       );
 
       embarkedTokens[tokenId] = block.number;
-      emit Embark(msg.sender, tokenId);
+      emit Embark(owner, tokenId);
   }
 
-  function unroost(uint256 tokenId) public onlyOperator(msg.sender, tokenId)  {
+  function unroost(address owner, uint256 tokenId) public onlyOperator() {
       require(
           roostedTokens[tokenId] != uint256(0), 
           "She is not roosting."
@@ -106,10 +110,10 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
 
       uint blockAge = block.number - roostedTokens[tokenId];
       roostedTokens[tokenId] = uint256(0);
-      emit Unroost(msg.sender, tokenId, blockAge);
+      emit Unroost(owner, tokenId, blockAge);
   }
 
-  function conclude(uint256 tokenId) public onlyOperator(msg.sender, tokenId) {
+  function conclude(address owner, uint256 tokenId) public onlyOperator() {
       require(
           embarkedTokens[tokenId] != uint256(0),
           "She is not on a journey"
@@ -117,7 +121,7 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
 
       uint blockAge = block.number - embarkedTokens[tokenId];
       embarkedTokens[tokenId] = 0;
-      emit Conclude(msg.sender, tokenId, blockAge);
+      emit Conclude(owner, tokenId, blockAge);
   }
 
   /* They're roosting if theres a non-zero number in mapping (ie: its a block number) */
@@ -128,6 +132,23 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
   /* They're embarking if theres a non-zero number in mapping (ie: its a block number) */
   function isEmbarking(uint256 tokenId) public view returns(bool) {
     return embarkedTokens[tokenId] != uint256(0);
+  }
+  
+  function layEgg(address operator, uint256 mermaidTokenId, address to) public onlyRoleFor(GAIA_ROLE, operator) {
+    eggsLaid[mermaidTokenId] = eggsLaid[mermaidTokenId] + 1;
+    emit LayEgg(operator, to, mermaidTokenId);
+  }
+
+  function birth(
+    address operator, 
+    address to,
+    uint256 parentMermaidTokenId, 
+    uint256 eggTokenId) public onlyRoleFor(EGG_HATCHER_ROLE, operator) {
+    parents[currentAvailableEggMintId] = parentMermaidTokenId;
+    eggs[currentAvailableEggMintId] = eggTokenId;
+
+    currentAvailableEggMintId = currentAvailableEggMintId + 1;
+    emit EggHatched(to, currentAvailableEggMintId, eggTokenId);
   }
 }
 

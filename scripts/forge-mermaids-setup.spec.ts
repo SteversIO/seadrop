@@ -18,7 +18,7 @@ import { randomInt } from "crypto";
  * OR:
  * run the command below in Javascript Debug Terminal in VSCode to use debug mode.
  */
- // HARDHAT_NETWORK=ganache npx mocha --debug-brk --inspect --require ts-node/register scripts/**/*.spec.ts
+ // HARDHAT_NETWORK=goerli npx mocha --debug-brk --inspect --require ts-node/register scripts/**/*.spec.ts
 
 
  /**
@@ -37,14 +37,16 @@ const mintParams = {
   feeBps: randomInt(1, 10000),
   restrictFeeRecipients: true,
 };
- 
-describe("Mermaids", function() {
+
+// hardhat's localhost, spun up by hh-node
+// or Goerli
+const mechanicsAddress = '0x77937F13C87eF7552Fa838e8d7506Ac9B2551197';
+const mermaidsSeaDropAddress = '0xA86Df0B2b6aD8DFFD5017f6191C2389189a7f925';
+const goerliParentSeaDropAddress = '0x00005EA00Ac477B1030CE78506496e8C2dE24bf5';
+
+xdescribe("Mermaids", function() {
   const DEFAULT_TIMEOUT = 15_000;
   this.timeout(DEFAULT_TIMEOUT);
-  let mechanicsAddress = '0xE420335539e415634Fe3e09d2E206b91Cbee1c24'; // hardhat's localhost, spun up by hh-0node
-  let mermaidsAddress = '0xE8F5675089225630bB7a008E2516b31d3342756b'; // hardhat's localhost, spun up by hh-node
-  const goerliSeaDropAddress = '0x00005EA00Ac477B1030CE78506496e8C2dE24bf5';
-
   let mermaidMechanics: Contract;
   let mermaidsSeaDrop: Contract;
   let owner: any;
@@ -64,7 +66,7 @@ describe("Mermaids", function() {
     owner = owner1;
 
     mermaidMechanics = await MermaidMechanics.attach(mechanicsAddress);
-    mermaidsSeaDrop = await MermaidsSeaDrop.attach(mermaidsAddress);
+    mermaidsSeaDrop = await MermaidsSeaDrop.attach(mermaidsSeaDropAddress);
   });
 
   describe("checks plumbing", () => {
@@ -74,7 +76,7 @@ describe("Mermaids", function() {
   
     it("checks that contract addresses match", () => {
       expect(mermaidMechanics.address).to.equal(mechanicsAddress);
-      expect(mermaidsSeaDrop.address).to.equal(mermaidsAddress);
+      expect(mermaidsSeaDrop.address).to.equal(mermaidsSeaDropAddress);
     });
 
     it("checks eth balance of automation owner's address", async () => {
@@ -114,7 +116,44 @@ describe("Mermaids", function() {
     });
   });
 
-  describe("sets up Mermaids contract", () => {
+  describe("Mermaid Mechanics initialization", function() {
+    const DEFAULT_TIMEOUT = 15_000;
+    this.timeout(DEFAULT_TIMEOUT);
+    let mermaidMechanics: Contract;
+    let owner: any;
+    let options: any;
+  
+    before(async () => {
+      options = await defaultGasOptions();
+      const MermaidMechanics = await ethers.getContractFactory("MermaidMechanics");
+      const [owner1] = await ethers.getSigners();
+      owner = owner1;
+  
+      mermaidMechanics = await MermaidMechanics.attach(mechanicsAddress);
+    });
+  
+    it("checks that we're connected to the Goerli network", async () => {
+      const networkName = hre.network.name;
+      assert.equal('goerli', networkName, "Network is NOT goerli!");
+    });
+  
+    it("sets up operator", async () => {
+      const operator = await mermaidMechanics.operator;
+      let tx = await mermaidMechanics.setOperator(mermaidsSeaDropAddress);
+      console.log(`Tx for setting operator@ ${tx.hash}`)
+    });
+
+    it(`grants EGG_HATCHER_ROLE for owner address`, async () => {
+      const options = await defaultGasOptions();
+      const eggHatcherRole = await mermaidMechanics.EGG_HATCHER_ROLE();
+      const tx = await mermaidMechanics.grantRole(eggHatcherRole, owner.address, options);
+      console.log(`birth role set @tx: ${tx.hash}`);
+      const hasRole = await mermaidMechanics.hasRole(eggHatcherRole, owner.address, options);
+      assert.equal(hasRole, true);
+    });
+  });
+
+  xdescribe("Mermaids Sea Drop initialization", () => {
     it("sets max supply", async () => {
       const tx = await mermaidsSeaDrop.setMaxSupply(expectedMaxSupply, options);
       console.log(`maxSupply set to: ${expectedMaxSupply}`);
@@ -133,36 +172,6 @@ describe("Mermaids", function() {
       assert.notEqual(tx.hash, undefined);
     });
 
-    xit("tries to set allow list explicit code", async () => {
-      // Encode the minter address and mintParams.
-    const elementsBuffer = await allowListElementsBuffer([
-      [owner.address, mintParams],
-    ]);
-
-    // Construct a merkle tree from the allow list elements.
-    const merkleTree = createMerkleTree(elementsBuffer);
-
-    // Store the merkle root.
-    const root = merkleTree.getHexRoot();
-
-    // Get the leaf at index 0.
-    const leaf = merkleTree.getLeaf(0);
-
-    // Get the proof of the leaf to pass into the transaction.
-    const proof = merkleTree.getHexProof(leaf);
-
-    // Declare the allow list data.
-    const allowListData = {
-      merkleRoot: root,
-      publicKeyURIs: [],
-      allowListURI: "",
-    };
-
-    // Update the allow list of the token.
-    const tx = await mermaidsSeaDrop.updateAllowList(goerliSeaDropAddress, allowListData);
-    console.log(`manual explicit test update allow list @ ${tx.hash}`);
-    })
-
     it(`sets mint cost to ${etherMintCostPerNft} ether`, async () => {
       const options = await defaultGasOptions();
       const mintCost = ethers.utils.parseUnits(`${etherMintCostPerNft}`, "ether");
@@ -170,12 +179,60 @@ describe("Mermaids", function() {
       console.log(`Mint cost updated to ${etherMintCostPerNft} @tx: ${tx.hash}`)
       assert.notEqual(tx.hash, undefined);
     });
+  });
 
-    it("sets creator payout, fee recipient and updates public drop", async() => {
-      const seadrop = goerliSeaDropAddress;
-      const feeRecipient = owner.address;
-      const creator = feeRecipient;
-      
+  xdescribe("sets up SeaDrop specific initialization", async () => {
+    let seadrop: any;
+    let feeRecipient: any;
+    let creator: any;
+
+    before(() => {
+      seadrop = goerliParentSeaDropAddress;
+      feeRecipient = owner.address;
+      creator = feeRecipient;
+    })
+
+    xit("tries to set allow list explicit code", async () => {
+      // Encode the minter address and mintParams.
+      const elementsBuffer = await allowListElementsBuffer([
+        [owner.address, mintParams],
+      ]);
+
+      // Construct a merkle tree from the allow list elements.
+      const merkleTree = createMerkleTree(elementsBuffer);
+
+      // Store the merkle root.
+      const root = merkleTree.getHexRoot();
+
+      // Get the leaf at index 0.
+      const leaf = merkleTree.getLeaf(0);
+
+      // Get the proof of the leaf to pass into the transaction.
+      const proof = merkleTree.getHexProof(leaf);
+
+      // Declare the allow list data.
+      const allowListData = {
+        merkleRoot: root,
+        publicKeyURIs: [],
+        allowListURI: "",
+      };
+
+      // Update the allow list of the token.
+      const tx = await mermaidsSeaDrop.updateAllowList(goerliParentSeaDropAddress, allowListData);
+      console.log(`manual explicit test update allow list @ ${tx.hash}`);
+    });
+
+    it("sets creator payout", async() => {
+      const cpTx = await mermaidsSeaDrop.updateCreatorPayoutAddress(seadrop, creator);
+      console.log(`creator payout update @tx: ${cpTx.hash}`);
+    })
+
+    xit("sets fee recipient and updates public drop", async() => {
+      const recipientTx = await mermaidsSeaDrop.updateAllowedFeeRecipient(seadrop, feeRecipient, true);
+      console.log(`recipient @tx: ${recipientTx.hash}`);
+    })
+
+    xit("sets fee recipient and updates public drop", async() => {
       const publicDrop = {
         mintPrice: "100000000000000000", // 0.1 ether
         maxTotalMintableByWallet: 10,
@@ -185,32 +242,19 @@ describe("Mermaids", function() {
         restrictFeeRecipients: true,
       };
 
-      const cpTx = await mermaidsSeaDrop.updateCreatorPayoutAddress(seadrop, creator);
-      const recipientTx = await mermaidsSeaDrop.updateAllowedFeeRecipient(seadrop, feeRecipient, true);
       const pdTx = await mermaidsSeaDrop.updatePublicDrop(seadrop, publicDrop);
-      console.log(`creator payout update @tx: ${cpTx.hash}`);
-      console.log(`recipient @tx: ${recipientTx.hash}`);
       console.log(`public drop @tx: ${pdTx.hash}`);
-    })
+    });
 
-    it("sets allowed list", async () => {
+    xit("sets allowed list", async () => {
       const allowedListData = await createAllowListDataFromAddresses([owner.address]);
-      const tx = await mermaidsSeaDrop.updateAllowList(goerliSeaDropAddress, allowedListData, options);
+      const tx = await mermaidsSeaDrop.updateAllowList(goerliParentSeaDropAddress, allowedListData, options);
       console.log(`allowed list @tx: ${tx.hash}`);
       assert.notEqual(tx.hash, undefined);
     });
+  })
 
-    it(`grants EGG_HATCHER_ROLE for owner address`, async () => {
-      const options = await defaultGasOptions();
-      const eggHatcherRole = await mermaidMechanics.EGG_HATCHER_ROLE();
-      const tx = await mermaidMechanics.grantRole(eggHatcherRole, owner.address, options);
-      console.log(`birth role set @tx: ${tx.hash}`);
-      const hasRole = await mermaidMechanics.hasRole(eggHatcherRole, owner.address, options);
-      assert.equal(hasRole, true);
-    });
-  });
-
-  describe("test minting", () => {
+  xdescribe("test minting", () => {
     const mintQuantity = 10;
 
     const loopCount = 1;
@@ -263,6 +307,128 @@ describe("Mermaids", function() {
   });
 });
 
+describe("Standard ERC721SeaDrop", function () {
+  const DEFAULT_TIMEOUT = 15_000;
+  this.timeout(DEFAULT_TIMEOUT);
+  let originalERC721SeaDropToken: Contract;
+  let owner: any;
+
+  const expectedMaxSupply = 250;
+  const expectedBaseUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids/'; // omit {id} from URL for baseUri
+  const contractUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids';
+  const etherMintCostPerNft = 0.0001; // 100000000000000 wei
+
+  const seaDropOriginalAddress = '0xA86Df0B2b6aD8DFFD5017f6191C2389189a7f925'; // '0x06739ACD5c56B292B7dA407586bB7198fa9685C6';
+  let options: any;
+  
+  before(async () => {
+    options = await defaultGasOptions();
+    const ERC721SeaDropToken = await ethers.getContractFactory("GenesisMermaidsSeaDrop");
+    const [owner1] = await ethers.getSigners();
+    owner = owner1;
+
+    originalERC721SeaDropToken = await ERC721SeaDropToken.attach(seaDropOriginalAddress);
+  });
+
+  xdescribe("ERC721SeaDrop initialization", () => {
+    it("sets max supply", async () => {
+      const tx = await originalERC721SeaDropToken.setMaxSupply(expectedMaxSupply, options);
+      console.log(`maxSupply set to: ${expectedMaxSupply}`);
+      assert.notEqual(tx.hash, undefined);
+    });
+
+    it("sets baseUri", async () => {
+      const tx = await originalERC721SeaDropToken.setBaseURI(expectedBaseUri, options);
+      console.log(`baseUri @tx: ${tx.hash}`);
+      assert.notEqual(tx.hash, undefined);
+    });
+
+    it("sets contractUri", async () => {
+      const tx = await originalERC721SeaDropToken.setContractURI(contractUri, options);
+      console.log(`contractUri @tx: ${tx.hash}`);
+      assert.notEqual(tx.hash, undefined);
+    });
+  });
+
+  xdescribe("GenesisERC721SeaDrop initialization", () => {
+    it(`sets mint cost to ${etherMintCostPerNft} ether`, async () => {
+      const options = await defaultGasOptions();
+      const mintCost = ethers.utils.parseUnits(`${etherMintCostPerNft}`, "ether");
+      
+      const tx = await originalERC721SeaDropToken.setMintCost(mintCost, options);  // contract owner required for this call.
+      console.log(`Mint cost updated to ${etherMintCostPerNft} @tx: ${tx.hash}`)
+      assert.notEqual(tx.hash, undefined);
+    });
+
+    it(`sets mechanics address to ${mechanicsAddress}`, async () => {
+      const tx = await originalERC721SeaDropToken.setMechanics(mechanicsAddress);  // contract owner required for this call.
+      console.log(`Mechanics address updated @tx: ${tx.hash}`)
+      assert.notEqual(tx.hash, undefined);
+    });
+
+    it("sets max supply", async () => {
+      const tx = await originalERC721SeaDropToken.setMaxSupply(expectedMaxSupply, options);
+      console.log(`maxSupply set to: ${expectedMaxSupply}`);
+      assert.notEqual(tx.hash, undefined);
+    });
+
+    it("sets baseUri", async () => {
+      const tx = await originalERC721SeaDropToken.setBaseURI(expectedBaseUri, options);
+      console.log(`baseUri @tx: ${tx.hash}`);
+      assert.notEqual(tx.hash, undefined);
+    });
+
+    it("sets contractUri", async () => {
+      const tx = await originalERC721SeaDropToken.setContractURI(contractUri, options);
+      console.log(`contractUri @tx: ${tx.hash}`);
+      assert.notEqual(tx.hash, undefined);
+    });
+  });
+
+  describe("sets up SeaDrop specific initialization", async () => {
+    let seadrop: any;
+    let feeRecipient: any;
+    let creator: any;
+
+    before(() => {
+      seadrop = goerliParentSeaDropAddress;
+      feeRecipient = owner.address;
+      creator = feeRecipient;
+    })
+
+    it("sets creator payout", async() => {
+      const cpTx = await originalERC721SeaDropToken.updateCreatorPayoutAddress(seadrop, creator);
+      console.log(`creator payout update @tx: ${cpTx.hash}`);
+    })
+
+    it("sets fee recipient and updates public drop", async() => {
+      const recipientTx = await originalERC721SeaDropToken.updateAllowedFeeRecipient(seadrop, feeRecipient, true);
+      console.log(`recipient @tx: ${recipientTx.hash}`);
+    })
+
+    it("sets fee recipient and updates public drop", async() => {
+      const publicDrop = {
+        mintPrice: "1000000000000000", // 0.001 ether
+        maxTotalMintableByWallet: 10,
+        startTime: Math.round(Date.now() / 1000) - 100,
+        endTime: Math.round(Date.now() / 1000) + 100,
+        feeBps: 1000,
+        restrictFeeRecipients: true,
+      };
+
+      const pdTx = await originalERC721SeaDropToken.updatePublicDrop(seadrop, publicDrop);
+      console.log(`public drop @tx: ${pdTx.hash}`);
+    });
+
+    it("sets allowed list", async () => {
+      const allowedListData = await createAllowListDataFromAddresses([owner.address]);
+      const tx = await originalERC721SeaDropToken.updateAllowList(goerliParentSeaDropAddress, allowedListData, options);
+      console.log(`allowed list @tx: ${tx.hash}`);
+      assert.notEqual(tx.hash, undefined);
+    });
+  })
+})
+
 async function getBalance(address: string) {
   const balance = await ethers.provider.getBalance(address);
   const balanceInEth = ethers.utils.formatEther(balance);
@@ -279,7 +445,7 @@ async function defaultGasOptions() {
 
 async function estimateGas() {
   let gasPrice: BigNumber = await ethers.provider.getGasPrice();
-  const multiplier = 2.5; // avoids 'replacement fee too low' error.
+  const multiplier = 1.5; // avoids 'replacement fee too low' error.
   gasPrice = multiply(gasPrice, multiplier);
 
   return gasPrice;

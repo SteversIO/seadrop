@@ -98,33 +98,6 @@ contract ERC721SeaDrop is
     }
 
     /**
-     * BEGIN CUSTOM MERMAID CODE
-    */
-    address payable public recipient;
-    uint internal balance = 0;
-    uint256 mintRate = 0.001 ether;
-
-    function setMintCost(uint256 updatedMintRate) public onlyOwner {
-      mintRate = updatedMintRate;
-    }
-
-    function mint(uint256 quantity) payable public {
-      require(msg.value >= (quantity * mintRate), "Not enough ether sent.");
-      balance += msg.value;
-      
-      _safeMint(msg.sender, quantity);
-    }
-
-    function withdraw() public {
-      require(msg.sender == recipient, "Not recipient");
-      recipient.transfer(balance);
-    }
-
-    /**
-     * END CUSTOM MERMAID CODE
-    */
-
-    /**
      * @notice Update the allowed SeaDrop contracts.
      *         Only the owner or administrator can use this function.
      *
