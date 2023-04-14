@@ -56,7 +56,7 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
   }
 
   modifier onlyOperator(address operator, uint256 tokenId) {
-    address owner = ownerOf(tokenId);
+    address owner = mermaids.ownerOf(tokenId);
     require(mermaids.isApprovedForAll(owner, operator), "Not an operator for owner.");
     _;
   }

@@ -40,8 +40,12 @@ const mintParams = {
 
 // hardhat's localhost, spun up by hh-node
 // or Goerli
-const mechanicsAddress = '0x77937F13C87eF7552Fa838e8d7506Ac9B2551197';
-const mermaidsSeaDropAddress = '0xA86Df0B2b6aD8DFFD5017f6191C2389189a7f925';
+const mechanicsAddress = '0xE9810785822662712BC8d60860A9c197843c5237';
+let mermaidsSeaDropAddress = '0xA86Df0B2b6aD8DFFD5017f6191C2389189a7f925';
+
+const seaDropOriginalAddress = '0x1682fF61BBB58F6339B684ab5d05CDfB23Cb0920';
+mermaidsSeaDropAddress = seaDropOriginalAddress;
+
 const goerliParentSeaDropAddress = '0x00005EA00Ac477B1030CE78506496e8C2dE24bf5';
 
 xdescribe("Mermaids", function() {
@@ -318,12 +322,11 @@ describe("Standard ERC721SeaDrop", function () {
   const contractUri = 'https://metapi-mermaids.herokuapp.com/metadata/mermaids';
   const etherMintCostPerNft = 0.0001; // 100000000000000 wei
 
-  const seaDropOriginalAddress = '0xA86Df0B2b6aD8DFFD5017f6191C2389189a7f925'; // '0x06739ACD5c56B292B7dA407586bB7198fa9685C6';
   let options: any;
   
   before(async () => {
     options = await defaultGasOptions();
-    const ERC721SeaDropToken = await ethers.getContractFactory("GenesisMermaidsSeaDrop");
+    const ERC721SeaDropToken = await ethers.getContractFactory("ERC721SeaDrop");
     const [owner1] = await ethers.getSigners();
     owner = owner1;
 
@@ -350,7 +353,7 @@ describe("Standard ERC721SeaDrop", function () {
     });
   });
 
-  xdescribe("GenesisERC721SeaDrop initialization", () => {
+  xdescribe("Genesis vs ERC721SeaDrop initialization", () => {
     it(`sets mint cost to ${etherMintCostPerNft} ether`, async () => {
       const options = await defaultGasOptions();
       const mintCost = ethers.utils.parseUnits(`${etherMintCostPerNft}`, "ether");
@@ -360,11 +363,12 @@ describe("Standard ERC721SeaDrop", function () {
       assert.notEqual(tx.hash, undefined);
     });
 
-    it(`sets mechanics address to ${mechanicsAddress}`, async () => {
-      const tx = await originalERC721SeaDropToken.setMechanics(mechanicsAddress);  // contract owner required for this call.
-      console.log(`Mechanics address updated @tx: ${tx.hash}`)
-      assert.notEqual(tx.hash, undefined);
-    });
+    // deprecated; no longer exists in MermaidsSeaDrop
+    // it(`sets mechanics address to ${mechanicsAddress}`, async () => {
+    //   const tx = await originalERC721SeaDropToken.setMechanics(mechanicsAddress);  // contract owner required for this call.
+    //   console.log(`Mechanics address updated @tx: ${tx.hash}`)
+    //   assert.notEqual(tx.hash, undefined);
+    // });
 
     it("sets max supply", async () => {
       const tx = await originalERC721SeaDropToken.setMaxSupply(expectedMaxSupply, options);
@@ -385,7 +389,7 @@ describe("Standard ERC721SeaDrop", function () {
     });
   });
 
-  describe("sets up SeaDrop specific initialization", async () => {
+  xdescribe("sets up SeaDrop specific initialization", async () => {
     let seadrop: any;
     let feeRecipient: any;
     let creator: any;
@@ -426,6 +430,20 @@ describe("Standard ERC721SeaDrop", function () {
       console.log(`allowed list @tx: ${tx.hash}`);
       assert.notEqual(tx.hash, undefined);
     });
+  })
+
+  describe("updated Mechanics setup", () => {
+    let mermaidMechanics: any;
+
+    before(async ()=>{
+      const MermaidMechanics = await ethers.getContractFactory("MermaidMechanics");
+
+      mermaidMechanics = await MermaidMechanics.attach(mechanicsAddress);
+    })
+    it("sets mermaid contract", async () => {
+      const tx = await mermaidMechanics.setMermaids(seaDropOriginalAddress);
+      console.log(`mermaids contract updated in Mechanics @ tx: ${tx.hash}`)
+    })
   })
 })
 
