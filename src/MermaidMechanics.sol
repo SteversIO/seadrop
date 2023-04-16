@@ -19,28 +19,8 @@ import {
 
 /// @custom:security-contact steve@megacatstudios.com
 contract MermaidMechanics is AccessControl, IMermaidMechanics {
-  bytes32 public constant GAIA_ROLE = keccak256("GAIA_ROLE");
-  bytes32 public constant EGG_HATCHER_ROLE = keccak256("EGG_HATCHER_ROLE");
-
   mapping (uint256 => uint256) private roostedTokens;
   mapping (uint256 => uint256) private embarkedTokens;
-
-  // Egg mechanics
-  mapping (uint256 => uint256) private eggsLaid;
-  mapping (uint256 => uint256) private parents; // tracks the parents of a mermaid
-  mapping (uint256 => uint256) private eggs; // tracks the egg that a mermaid hatched from (refers to tokenId in MermaidEggs contract)
-
-  event LayEgg(
-      address indexed _invoker,
-      address indexed _to,
-      uint256 indexed _tokenId
-  );
-
-  event EggHatched(
-      address indexed _to,
-      uint256 indexed _babyTokenId,
-      uint256 indexed _hatchedEggTokenId
-  );
 
   event Roost(address indexed _caller, uint256 indexed _tokenId);
   event Unroost(address indexed _caller, uint256 indexed _tokenId, uint256 indexed _blockAge);
