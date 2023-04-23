@@ -51,18 +51,18 @@ contract ChildMermaids is
   );
 
   function layEgg(address recipient) public onlyRole(GAIA_ROLE) {
-    uint256 eggTokenId = _currentIndex;
+    uint256 eggTokenId = _nextTokenId();
     _safeMint(recipient, 1);
     eggs[eggTokenId] = true;
     emit LayEgg(msg.sender, recipient, eggTokenId);
   }
 
-  function hatch(uint256 eggTokenId) {
+  function hatch(uint256 eggTokenId) public {
     require(eggs[eggTokenId], "That is not an egg");
     require(ownerOf(eggTokenId) == msg.sender, "You are not the owner.");
     _burn(eggTokenId);
 
-    uint256 childTokenId = _currentIndex;
+    uint256 childTokenId = _nextTokenId();
     _safeMint(msg.sender, 1);
     children[childTokenId] = true;
     emit EggHatched(msg.sender, eggTokenId, childTokenId);
@@ -119,7 +119,7 @@ contract ChildMermaids is
       public
       view
       virtual
-      override(IERC165, ERC721ContractMetadata)
+      override(ERC721ContractMetadata, AccessControl)
       returns (bool)
   {
       return
