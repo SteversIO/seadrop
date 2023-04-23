@@ -37,13 +37,21 @@ contract MermaidMechanics is AccessControl, IMermaidMechanics {
 
   modifier onlyOperator(address operator, uint256 tokenId) {
     address owner = mermaids.ownerOf(tokenId);
-    require(mermaids.isApprovedForAll(owner, operator), "Not an operator for owner.");
+    require(owner == operator || mermaids.isApprovedForAll(owner, operator), "Not an operator for owner.");
     _;
   }
 
   constructor(address mermaidsAddress) {
     _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     setMermaids(mermaidsAddress);
+  }
+
+  function isApprovedForAllOnMermaids(address owner, address operator) external view returns(bool)  {
+    return mermaids.isApprovedForAll(owner, operator);
+  }
+
+  function ownerOfToken(uint256 tokenId) external view returns(address) {
+    return mermaids.ownerOf(tokenId);
   }
 
   function setMermaids(address mermaidsAddress) public onlyRole(DEFAULT_ADMIN_ROLE) {
