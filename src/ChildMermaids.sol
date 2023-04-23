@@ -26,6 +26,8 @@ contract ChildMermaids is
   bytes32 public constant GAIA_ROLE = keccak256("GAIA_ROLE");
   mapping (uint256 => bool) private eggs;
   mapping (uint256 => bool) private children;
+  string _baseEggUri;
+
   /**
    * @notice Deploy the token contract with its name, symbol, and uris
    */
@@ -33,11 +35,16 @@ contract ChildMermaids is
       string memory name,
       string memory symbol,
       string memory tokenUri,
+      string memory baseEggUri,
       string memory contractUri
   ) ERC721ContractMetadata(name, symbol) { 
     _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     _grantRole(GAIA_ROLE, msg.sender);
+    _baseEggUri = baseEggUri;
+    ERC721ContractMetadata._tokenBaseURI = tokenUri;
+    ERC721ContractMetadata._contractURI = contractUri;
   }
+
   event LayEgg(
     address indexed _invoker,
     address indexed _to,
@@ -49,6 +56,10 @@ contract ChildMermaids is
     uint256 indexed _hatchedEggTokenId,
     uint256 indexed _babyTokenId
   );
+
+  function setEggUri(string calldata newEggUri) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    _baseEggUri = newEggUri;
+  }
 
   function layEgg(address recipient) public onlyRole(GAIA_ROLE) {
     uint256 eggTokenId = _nextTokenId();
@@ -93,6 +104,10 @@ contract ChildMermaids is
       override
       returns (string memory)
   {
+      if(eggs[tokenId]) {
+        return string(abi.encodePacked(_baseEggUri, _toString(tokenId)));
+      }
+
       if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
 
       string memory baseURI = _baseURI();
