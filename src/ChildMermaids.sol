@@ -25,8 +25,13 @@ contract ChildMermaids is
 {
   bytes32 public constant GAIA_ROLE = keccak256("GAIA_ROLE");
   mapping (uint256 => bool) private eggs;
-  mapping (uint256 => bool) private children;
-  string _baseEggUri;
+  mapping (uint256 => uint256) private childTokenToMetadataIndex;
+  mapping (uint256 => uint256) private eggToMermaid;
+
+  string public _baseEggUri;
+  uint256 public maxMermaids = 6667;
+  uint256 private _currentCount = 0;
+  uint256 private _currentChildMetadataIndex = 1;
 
   /**
    * @notice Deploy the token contract with its name, symbol, and uris
@@ -57,26 +62,56 @@ contract ChildMermaids is
     uint256 indexed _babyTokenId
   );
 
+
   function setEggUri(string calldata newEggUri) external onlyRole(DEFAULT_ADMIN_ROLE) {
     _baseEggUri = newEggUri;
   }
 
   function layEgg(address recipient) public onlyRole(GAIA_ROLE) {
+    require(_currentCount + 1 <= maxMermaids, "No more mermaids are allowed.");
     uint256 eggTokenId = _nextTokenId();
     _safeMint(recipient, 1);
     eggs[eggTokenId] = true;
+    _currentCount = _currentCount + 1;
     emit LayEgg(msg.sender, recipient, eggTokenId);
   }
 
   function hatch(uint256 eggTokenId) public {
+    // burn the egg
     require(eggs[eggTokenId], "That is not an egg");
     require(ownerOf(eggTokenId) == msg.sender, "You are not the owner.");
     _burn(eggTokenId);
 
+    // get internal tokenId for new child mermaid
     uint256 childTokenId = _nextTokenId();
     _safeMint(msg.sender, 1);
-    children[childTokenId] = true;
+
+    // tracks the child mermaid's tokenId and its "metadata index" in our metadata system.
+    // eggs won't have an index since they're intended to be transient
+    eggToMermaid[eggTokenId] = childTokenId;
+    childTokenToMetadataIndex[childTokenId] = _currentChildMetadataIndex;
+    _currentChildMetadataIndex = _currentChildMetadataIndex + 1;
     emit EggHatched(msg.sender, eggTokenId, childTokenId);
+  }
+
+  function setMaxMermaids(uint256 _maxMermaids) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    maxMermaids = _maxMermaids;
+  }
+
+  function lookupTokenIdFromEgg(uint256 eggTokenId) public view virtual returns (uint256) {
+    if(eggs[eggTokenId]) {
+      return eggToMermaid[eggTokenId];
+    }
+
+    return 0;
+  }
+
+  function lookupMetadataIndex(uint256 tokenId) public view virtual returns (uint256) {
+    if(eggs[tokenId]) {
+      return 0;
+    }
+
+    return childTokenToMetadataIndex[tokenId];
   }
 
   /**
@@ -122,7 +157,9 @@ contract ChildMermaids is
           return baseURI;
       }
 
-      return string(abi.encodePacked(baseURI, _toString(tokenId)));
+      uint256 metadataIndex = childTokenToMetadataIndex[tokenId];
+
+      return string(abi.encodePacked(baseURI, _toString(metadataIndex)));
   }
 
   /**
