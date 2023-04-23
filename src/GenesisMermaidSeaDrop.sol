@@ -42,7 +42,7 @@ import {
  * @notice GenesisMermaidSeaDrop is a token contract that contains methods
  *         to properly interact with OpenSea's SeaDrop.
  */
-contract ERC721SeaDrop is
+contract GenesisMermaidSeaDrop is
     ERC721ContractMetadata,
     INonFungibleSeaDropToken,
     ERC721SeaDropStructsErrorsAndEvents,
