@@ -62,6 +62,14 @@ contract Mermaids is ERC1155, AccessControl, ERC1155Burnable {
       recipient.transfer(balance);
     }
 
+    function freeMint(uint256 amount)
+        public onlyRole(GAIA_ROLE)
+    {
+        require(currentAvailableFreeMintId <= freeMintLimit, "No more mermaids left to freely mint!");
+        _mint(_msgSender(), currentAvailableFreeMintId, amount, "");
+        currentAvailableFreeMintId = currentAvailableFreeMintId + 1;
+    }
+
     function layEgg(uint256 mermaidTokenId, address to) public onlyRole(GAIA_ROLE) {
         eggsLaid[mermaidTokenId] = eggsLaid[mermaidTokenId] + 1;
         emit LayEgg(_msgSender(), to, mermaidTokenId);
